@@ -1,0 +1,55 @@
+{
+  "version": "2.0",
+  "envId": "{{envId}}",
+  "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/latest.json",
+  "functionRoot": "cloudfunctions",
+  "framework": {
+    "name": "online-md",
+    "plugins": {
+      "client": {
+        "use": "@cloudbase/framework-plugin-website",
+        "inputs": {
+          "installCommand":"yarn install",
+          "buildCommand": "yarn run build",
+          "outputPath": "dist",
+          "cloudPath": "/",
+          "envVariables": {
+            "VUE_APP_ENV_ID": "{{env.ENV_ID}}"
+          }
+        }
+      },
+      "server": {
+        "use": "@cloudbase/framework-plugin-function",
+        "inputs": {
+          "functionRootPath": "cloudfunctions",
+          "functions": [
+            {
+              "name": "backend",
+              "timeout": 20,
+              "runtime": "Nodejs10.15",
+              "memory": 128,
+              "aclRule": { "invoke": "auth!=null" },
+              "installDependency": false,
+              "envVariables": {
+                "TZ": "Asia/Shanghai"
+              },
+              "triggers": [
+              ]
+            }
+          ]
+        }
+      },
+      "auth": {
+        "use": "@cloudbase/framework-plugin-auth",
+        "inputs": {
+          "configs": [
+            {
+              "platform": "NONLOGIN",
+              "status": "ENABLE"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
