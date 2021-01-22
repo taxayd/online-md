@@ -2,15 +2,16 @@ exports.main = async (event, context) => {
   if ('queryStringParameters' in event) {
     event = {
       ...event,
-      ...event.queryStringParameters
+      ...event.queryStringParameters,
     }
   }
   const { auth } = event
   const envPwd = require("crypto-js/sha256")(process.env.PASSWORD)
   if (auth !== envPwd) {
+    console.log('login failed, event', event, 'envPwd', envPwd)
     return {
       code: 1,
-      msg: '密码错误'
+      msg: '密码错误',
     }
   }
   const { api } = event
