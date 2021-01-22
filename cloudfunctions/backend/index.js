@@ -6,7 +6,7 @@ exports.main = async (event, context) => {
     }
   }
   const { auth } = event
-  const envPwd = require("crypto-js/sha256")(process.env.PASSWORD)
+  const envPwd = require("crypto-js/sha256")(process.env.PASSWORD).toString()
   if (auth !== envPwd) {
     console.log('login failed, event', event, 'envPwd', envPwd)
     return {
