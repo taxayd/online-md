@@ -48,7 +48,8 @@ exports.detail = async function(event) {
       data: null
     }
   }
-  console.log('file download start')
+  data = data[0]
+  console.log('file download start', data)
   const content = await app.downloadFile({
     fileID: data.fileID
   })
