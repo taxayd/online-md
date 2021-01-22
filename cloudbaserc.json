@@ -1,10 +1,27 @@
 {
   "version": "2.0",
-  "envId": "{{envId}}",
+  "envId": "{{env.ENV_ID}}",
   "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/latest.json",
   "functionRoot": "cloudfunctions",
   "framework": {
     "name": "online-md",
+    "requirement": {
+      "environment": {
+        "PASSWORD": {
+          "description": "请填写访问密码",
+          "required": true,
+          "default": "",
+          "validation": {
+            "rule": {
+              "type": "RegExp",
+              "pattern": ".{6,}",
+              "flag": "g"
+            },
+            "errorMessage": "密码长度需大于6位"
+          }
+        }
+      }
+    },
     "plugins": {
       "client": {
         "use": "@cloudbase/framework-plugin-website",
@@ -14,7 +31,7 @@
           "outputPath": "dist",
           "cloudPath": "/",
           "envVariables": {
-            "VUE_APP_ENV_ID": "{{env.ENV_ID}}"
+            "ENV_ID": "{{env.ENV_ID}}"
           }
         }
       },
@@ -35,6 +52,17 @@
               },
               "triggers": [
               ]
+            }
+          ]
+        }
+      },
+      "db": {
+        "use": "@cloudbase/framework-plugin-database",
+        "inputs": {
+          "collections": [
+            {
+              "collectionName": "file",
+              "aclTag": "READONLY"
             }
           ]
         }

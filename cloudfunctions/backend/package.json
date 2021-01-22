@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "description": "backend for online-md",
   "main": "index.js",
-  "scripts": {
-
-  },
+  "scripts": {},
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@cloudbase/node-sdk": "1.1.1"
+    "@cloudbase/node-sdk": "1.1.1",
+    "crypto-js": "^4.0.0"
   }
 }
