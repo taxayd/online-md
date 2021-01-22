@@ -76,7 +76,11 @@ exports.update = async function(event) {
   }
   const stream = require("stream")
   const streamContent = new stream.PassThrough()
-  streamContent.write(content)
+  await new Promise(resolve => {
+    streamContent.write(content, function() {
+      resolve()
+    })
+  })
   streamContent.end()
   const randomNumber = Math.random()
   console.log('file upload start')
