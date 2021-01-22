@@ -109,14 +109,10 @@ export default {
     }
   },
   methods: {
-    onChange(value) {
+    onChange: _.debounce(function(value) {
       this.file.content = value
       this.onChangeUpload()
-    },
-    // onChange: _.debounce(function(value) {
-    //   this.file.content = value
-    //   this.onChangeUpload()
-    // }, ),
+    }, 200),
     onChangeUpload: _.debounce(function() {
       this.uploadImpl()
     }, 1200),
