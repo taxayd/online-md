@@ -18,7 +18,7 @@ exports.main = async (event, context) => {
   const file_func = api.split('/')
   const file = file_func[0]
   const func = file_func[1]
-  console.log(`calling ${file}/${func}`)
+  console.log(`calling ${file}/${func}`, event)
   const ret = await require(`./api/${file}`)[func](event)
   console.log(`${file}/${func} return: `, ret)
   return ret

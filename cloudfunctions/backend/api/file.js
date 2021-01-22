@@ -78,8 +78,9 @@ exports.update = async function(event) {
   streamContent.write(content)
   const randomNumber = Math.random()
   console.log('file upload start')
+  const encodedTitle = encodeURI(title)
   const { newID } = await app.uploadFile({
-    cloudPath: `/${COS_PATH}/${title}_${randomNumber}.md`,
+    cloudPath: `/${COS_PATH}/${encodedTitle}_${randomNumber}.md`,
     fileContent: streamContent,
   })
   streamContent.end()
