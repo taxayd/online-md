@@ -45,7 +45,7 @@
               "timeout": 20,
               "runtime": "Nodejs10.15",
               "memory": 128,
-              "aclRule": { "invoke": "auth!=null" },
+              "aclRule": { "invoke": "true" },
               "installDependency": false,
               "envVariables": {
                 "TZ": "Asia/Shanghai"

@@ -41,6 +41,7 @@
 // export { API, http }
 
 /** call backend through sdk */
+import cloudbase from "@cloudbase/js-sdk";
 const API = {
   login: '/user/login',
   file: {
@@ -57,13 +58,14 @@ const http = {
     if (app === null) {
       envID = await require('axios').get('/cloudbaseenv.json')
         .then(res => {
-          return res.ENV_ID
+          console.log('env: ', res)
+          return res.data.ENV_ID
         })
         .catch(err => {
           console.error('get env err: ', err)
           return Promise.reject('获取环境ID失败')
         })
-      app = require('@cloudbase/js-sdk').init({env: envID})
+      app = cloudbase.init({env: envID})
     }
     let { params = {} } = options
     params.api = api.replace('/', '')
@@ -73,6 +75,10 @@ const http = {
     return app.callFunction({
       name: 'backend',
       data: params
+    })
+    .then(res => {
+      console.log('call function params: ', params, 'result: ', res)
+      return res;
     })
   },
 

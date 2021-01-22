@@ -4,8 +4,12 @@ node_modules
 
 
 # local env files
+.env
 .env.local
 .env.*.local
+
+# inject env file
+public/cloudbaseenv.json
 
 # Log files
 npm-debug.log*
