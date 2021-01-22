@@ -74,20 +74,16 @@ exports.update = async function(event) {
       msg: '无效内容',
     }
   }
-  const stream = require("stream")
-  const streamContent = new stream.PassThrough()
-  await new Promise(resolve => {
-    streamContent.write(content, function() {
-      resolve()
-    })
-  })
-  streamContent.end()
+  const fs = require('fs')
+  const tmpFile = '/tmp/' + Date.now() + '.md'
+  fs.writeFileSync(tmpFile, content)
+  const stream = fs.createReadStream(tmpFile)
   const randomNumber = Math.random()
-  console.log('file upload start')
   const encodedTitle = encodeURI(title)
+  console.log('file upload start')
   const newID = await app.uploadFile({
     cloudPath: `${COS_PATH}/${encodedTitle}_${randomNumber}.md`,
-    fileContent: streamContent,
+    fileContent: stream,
   })
   .then(res => {
     return res.fileID
