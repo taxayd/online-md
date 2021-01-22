@@ -78,7 +78,7 @@ const http = {
     })
     .then(res => {
       console.log('call function params: ', params, 'result: ', res)
-      return res;
+      return res.result;
     })
   },
 

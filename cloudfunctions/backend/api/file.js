@@ -76,13 +76,13 @@ exports.update = async function(event) {
   const stream = require("stream")
   const streamContent = new stream.PassThrough()
   streamContent.write(content)
-  streamContent.end()
   const randomNumber = Math.random()
   console.log('file upload start')
   const { newID } = await app.uploadFile({
     cloudPath: `/${COS_PATH}/${title}_${randomNumber}.md`,
     fileContent: streamContent,
   })
+  streamContent.end()
   console.log('file upload end.')
   if (fileID) {
     await db.collection('file')
