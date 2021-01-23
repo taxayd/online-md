@@ -69,9 +69,18 @@ exports.detail = async function(event) {
 exports.update = async function(event) {
   const { fileID = '', title, content } = event
   if (!title || !content) {
+    if (fileID) {
+      return {
+        code: 0,
+        msg: '无效内容',
+        data: {
+          fileID: fileID
+        }
+      }
+    }
     return {
       code: 1,
-      msg: '无效内容',
+      msg: '无效内容'
     }
   }
   const fs = require('fs')

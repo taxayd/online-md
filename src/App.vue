@@ -133,24 +133,23 @@ export default {
     'file.title': function(newValue) {
       document.title = newValue
     },
-    preview: function(newValue) {
-      const arr = eol.split(newValue)
-      let title = ''
+  },
+  methods: {
+    getTitleFromPreview(preview) {
+      const arr = eol.split(preview)
       for(let i=0; i<arr.length; i++) {
         const tmp = DOMPurify.sanitize(arr[i], {
           ALLOWED_TAGS: []
         })
-        console.log(tmp)
         if (tmp) {
-          title = tmp
-          break
+          return tmp
         }
       }
-      this.file.title = title
-    }
-  },
-  methods: {
+      return ''
+    },
     onChange: _.debounce(function(value) {
+      const preview = DOMPurify.sanitize(marked(value))
+      this.file.title = this.getTitleFromPreview(preview)
       this.file.content = value
       this.onChangeUpload()
     }, 200),
@@ -181,9 +180,10 @@ export default {
         })
         return
       }
+      const { fileID, title, content } = this.file
       http
       .post(API.file.update, {
-        data: this.file
+        data: {fileID, title, content}
       })
       .then(res => {
         if (res.code !== 0) {
