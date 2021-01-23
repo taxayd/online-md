@@ -16,10 +16,10 @@
       </v-dialog>
       <v-dialog v-if="dialogSelect" v-model="dialogSelect" max-width="300">
         <v-list color="white">
-          <v-list-item color="white" v-for="(file, index) in fileList" :key="file.fileID">
+          <v-list-item color="white" v-for="(file, index) in fileList" :key="file._id">
             <v-list-item-title>
               <v-row>
-                <v-col cols="9" class="flex-grow-1" v-on:click="onSelectFile(file)">
+                <v-col cols="9" class="flex-grow-1 text-truncate" v-on:click="onSelectFile(file)">
                   {{file.title}}
                 </v-col>
               <v-col cols="2" v-on:click="onDeleteFile(file, index)">
@@ -77,11 +77,11 @@ import DOMPurify from 'dompurify'
 import eol from "eol";
 import getInitMD from "./utils/initmd";
 const sha256 = require('crypto-js/sha256')
-const KEY_STORAGE_FILEID = 'lastEditFileID'
-const EMPTY_FILE = {
-  fileID: '',
-  title: '',
-  content: ''
+const KEY_STORAGE_FILE_ID = 'lastEditFile_ID'
+const FILE_TEMPLATE = {
+  _id: '',
+  title: 'Title here',
+  content: '# Title here\n'
 }
 
 export default {
@@ -104,7 +104,7 @@ export default {
         peekWidgetDefaultFocus: true,
       },
       // current file editing
-      file: Object.assign({}, EMPTY_FILE),
+      file: Object.assign({}, FILE_TEMPLATE),
       loadingDetail: true,
       // file list
       dialogSelect: false,
@@ -127,8 +127,8 @@ export default {
     },
   },
   watch: {
-    'file.fileID': function(newValue) {
-      window.localStorage.setItem(KEY_STORAGE_FILEID, newValue)
+    'file._id': function(newValue) {
+      window.localStorage.setItem(KEY_STORAGE_FILE_ID, newValue)
     },
     'file.title': function(newValue) {
       document.title = newValue
@@ -155,20 +155,20 @@ export default {
     }, 200),
     onChangeUpload: _.debounce(function() {
       this.uploadImpl()
-    }, 10),
+    }, 1000),
     ctrlSUpload: _.debounce(function(){
       this.uploadImpl()
-    }, 100),
+    }, 1200),// 同步算法还不完善，同步频率过快会导致错乱
     async uploadImpl() {
-      if (!this.file.fileID && !this.file.content) {
+      if (!this.file._id && !this.file.content) {
         return
       }
       this.syncStatus = 'yellow'
       if (!this.file.content) {
         // 清空内容，则删除当前文件
-        http.get(API.file.destory, {
+        await http.get(API.file.destory, {
           params: {
-            fileID: this.file.fileID
+            _id: this.file._id
           }
         })
         .then(() => {
@@ -180,17 +180,18 @@ export default {
         })
         return
       }
-      const { fileID, title, content } = this.file
-      http
+      const { _id, title, content } = this.file
+      await http
       .post(API.file.update, {
-        data: {fileID, title, content}
+        data: {_id, title, content}
       })
-      .then(res => {
+      .then((res) => {
         if (res.code !== 0) {
           return Promise.reject(res.msg)
         }
+        console.log('update finished: ', res)
         this.syncStatus = 'green'
-        this.file.fileID = res.data.fileID
+        this.file._id = res.data._id
       })
       .catch(err => {
         console.error(err)
@@ -237,24 +238,27 @@ export default {
         console.error('获取文件列表失败', err)
       })
     },
+    async onNewFile() {
+      this.file = Object.assign({}, FILE_TEMPLATE)
+    },
     async onSelectFile(file) {
       if (file === 'addnew') {
-        this.file = Object.assign({}, EMPTY_FILE)
+        this.onNewFile()
       } else {
-        await this.getFileDetail(file.fileID)
+        await this.getFileDetail(file._id)
       }
       this.dialogSelect = false
     },
     async onDeleteFile(file, index) {
       console.log('deleting', file, index, 'this.file', this.file)
-      if (file.fileID === this.file.fileID) {
+      if (file._id === this.file._id) {
         console.log('deleting current')
-        this.file = Object.assign({}, EMPTY_FILE)
+        this.file = Object.assign({}, FILE_TEMPLATE)
       }
       file.deleting = true
       http.get(API.file.destory, {
         params: {
-          fileID: file.fileID
+          _id: file._id
         }
       })
       .then(() => {
@@ -266,25 +270,25 @@ export default {
         window.showSnackbar('删除失败：' + err + '\n请重试')
       })
     },
-    async getFileDetail(fileID = '') {
+    async getFileDetail(_id = '') {
       this.loadingDetail = true
       await http
-      .get(API.file.detail, {fileID})
+      .get(API.file.detail, {_id})
       .then(async(res) => {
         if (res.code !== 0) {
           return Promise.reject(res.msg)
         }
-        if (!res.data && fileID) {
+        if (!res.data && _id) {
           return
         }
         let file = {}
         if (!res.data) {
           // 第一次进入，使用默认文件
-          file = Object.assign({}, EMPTY_FILE, {
+          file = Object.assign({}, FILE_TEMPLATE, {
             content: await getInitMD()
           })
         } else {
-          file = (({fileID, title, content}) => ({fileID, title, content}))(res.data)
+          file = (({_id, title, content}) => ({_id, title, content}))(res.data)
         }
         this.file = file
       })
@@ -298,7 +302,7 @@ export default {
       this.dialogSelect = true
     }
   },
-  created: function (){
+  mounted: function (){
     this.dialog = window.localStorage.getItem('auth') ? false : true
     window.showSnackbar = (msg, timeout = 2000) => {
       this.showSnackbar = true
@@ -315,17 +319,18 @@ export default {
         event.preventDefault()
         // 打开文件列表
         this.openFileList()
-        return false        
+        return false
+      }
+      if (event.key === 'n' && event.ctrlKey) {
+        event.preventDefault()
+        this.onNewFile()
+        return false
       }
       return true
     })
     if (!this.dialog) {
       // 获取要编辑的文件
-      let fileID = ''
-      if (window.localStorage.getItem(KEY_STORAGE_FILEID)) {
-        fileID = window.localStorage.getItem(KEY_STORAGE_FILEID)
-      }
-      this.getFileDetail(fileID)
+      this.getFileDetail(window.localStorage.getItem(KEY_STORAGE_FILE_ID))
     }
   },
 };

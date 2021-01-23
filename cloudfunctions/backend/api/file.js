@@ -18,9 +18,9 @@ exports.list = async function (event) {
 }
 
 exports.detail = async function(event) {
-  const { fileID = '' } = event
+  const { _id = '' } = event
   let data = null
-  if (!fileID) {
+  if (!_id) {
     // 未指定的情况下，取最近编辑的那个
     data = await db.collection('file')
       .orderBy('updated_at', 'desc')
@@ -29,18 +29,18 @@ exports.detail = async function(event) {
       .then(res => {
         return res.data
       })
-    console.log('without fileID got data: ', data)
+    console.log('without _id got data: ', data)
   } else {
     data = await db.collection('file')
       .where({
-        fileID: fileID,
+        _id: _id,
       })
       .limit(1)
       .get()
       .then(res => {
         return res.data
       })
-      console.log('with fileID got data: ', data)
+    console.log('with _id got data: ', data)
   }
   if (data.length === 0) {
     return {
@@ -67,14 +67,14 @@ exports.detail = async function(event) {
 }
 
 exports.update = async function(event) {
-  const { fileID = '', title, content } = event
+  const { _id, title, content } = event
   if (!title || !content) {
-    if (fileID) {
+    if (_id) {
       return {
         code: 0,
         msg: '无效内容',
         data: {
-          fileID: fileID
+          _id: _id
         }
       }
     }
@@ -90,7 +90,7 @@ exports.update = async function(event) {
   const randomNumber = Math.random()
   const encodedTitle = encodeURI(title)
   console.log('file upload start')
-  const newID = await app.uploadFile({
+  const fileID = await app.uploadFile({
     cloudPath: `${COS_PATH}/${encodedTitle}_${randomNumber}.md`,
     fileContent: stream,
   })
@@ -98,26 +98,38 @@ exports.update = async function(event) {
     return res.fileID
   })
   console.log('file upload end.')
-  if (fileID) {
+  if (_id) {
+    const oldFileID = await db.collection('file')
+    .where({_id})
+    .get()
+    .then(res => {
+      return res.data[0].fileID
+    })
     await db.collection('file')
-      .where({ fileID })
+      .where({ _id })
       .update({
-        fileID: newID,
+        fileID: fileID,
         title,
         updated_at: Date.now(),
       })
       .then(res => {
+        if (res.updated === 0) {
+          return Promise.reject('未找到对应文件')
+        }
         return app.deleteFile({
-          fileList: [fileID],
+          fileList: [oldFileID],
         })
       })
   } else {
-    await db.collection('file')
+    _id = await db.collection('file')
       .add({
         fileID: newID,
         title,
         created_at: Date.now(),
         updated_at: Date.now(),
+      })
+      .then(res => {
+        return res.id
       })
   }
   console.log('update database end.')
@@ -125,22 +137,22 @@ exports.update = async function(event) {
     code: 0,
     msg: 'success',
     data: {
-      fileID: newID,
+      _id: _id,
     },
   }
 }
 
 exports.destory = async function(event) {
-  const { fileID } = event
-  if (!fileID) {
+  const { _id } = event
+  if (!_id) {
     return {
       code: 1,
-      msg: 'no fileID'
+      msg: 'no _id'
     }
   }
   await db.collection('file')
   .where({
-    fileID
+    _id
   })
   .remove()
   return {
