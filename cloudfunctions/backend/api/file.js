@@ -67,7 +67,7 @@ exports.detail = async function(event) {
 }
 
 exports.update = async function(event) {
-  const { _id, title, content } = event
+  let { _id, title, content } = event
   if (!title || !content) {
     if (_id) {
       return {
