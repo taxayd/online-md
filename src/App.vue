@@ -212,6 +212,7 @@ export default {
         }
         window.localStorage.setItem('auth', sha256(this.password).toString())
         this.dialog = false
+        this.getFileDetail()
       })
       .catch(err => {
         this.btn_loading = false
