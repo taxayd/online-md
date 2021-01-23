@@ -242,6 +242,7 @@ export default {
       this.file = Object.assign({}, FILE_TEMPLATE)
     },
     async onSelectFile(file) {
+      console.log('onselect', file)
       if (file === 'addnew') {
         this.onNewFile()
       } else {
@@ -271,9 +272,14 @@ export default {
       })
     },
     async getFileDetail(_id = '') {
+      console.log('get file detail', _id)
       this.loadingDetail = true
       await http
-      .get(API.file.detail, {_id})
+      .get(API.file.detail, {
+        params: {
+          _id
+        }
+      })
       .then(async(res) => {
         if (res.code !== 0) {
           return Promise.reject(res.msg)
@@ -319,11 +325,6 @@ export default {
         event.preventDefault()
         // 打开文件列表
         this.openFileList()
-        return false
-      }
-      if (event.key === 'n' && event.ctrlKey) {
-        event.preventDefault()
-        this.onNewFile()
         return false
       }
       return true

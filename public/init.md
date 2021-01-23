@@ -4,7 +4,6 @@
 
 - Ctrl+S：同步
 - Ctrl+O：打开文件
-- Ctrl+N：新建文件
 - Ctrl+P：打印预览
 
 ## 标题

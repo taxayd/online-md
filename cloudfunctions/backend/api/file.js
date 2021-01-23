@@ -108,7 +108,7 @@ exports.update = async function(event) {
     await db.collection('file')
       .where({ _id })
       .update({
-        fileID: fileID,
+        fileID,
         title,
         updated_at: Date.now(),
       })
@@ -123,7 +123,7 @@ exports.update = async function(event) {
   } else {
     _id = await db.collection('file')
       .add({
-        fileID: newID,
+        fileID,
         title,
         created_at: Date.now(),
         updated_at: Date.now(),
