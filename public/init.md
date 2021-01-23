@@ -41,7 +41,7 @@ _You **can** combine them_
 
 ## 图片
 
-![logo](/images/logo.png)
+![logo](/logo.svg)
 Format: `![Alt Text](url)`
 
 ## 链接
