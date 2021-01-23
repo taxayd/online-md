@@ -133,6 +133,11 @@ export default {
     'file.title': function(newValue) {
       document.title = newValue
     },
+    'file.content': function(newValue) {
+      const preview = DOMPurify.sanitize(marked(newValue))
+      this.file.title = this.getTitleFromPreview(preview)
+      this.onChangeUpload()
+    },
   },
   methods: {
     getTitleFromPreview(preview) {
@@ -148,10 +153,7 @@ export default {
       return ''
     },
     onChange: _.debounce(function(value) {
-      const preview = DOMPurify.sanitize(marked(value))
-      this.file.title = this.getTitleFromPreview(preview)
       this.file.content = value
-      this.onChangeUpload()
     }, 200),
     onChangeUpload: _.debounce(function() {
       this.uploadImpl()
