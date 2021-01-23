@@ -16,9 +16,18 @@
       </v-dialog>
       <v-dialog v-if="dialogSelect" v-model="dialogSelect" max-width="300">
         <v-list color="white">
-          <v-list-item color="white" v-for="file in fileList" :key="file.fileID" v-on:click="onSelectFile(file)">
+          <v-list-item color="white" v-for="(file, index) in fileList" :key="file.fileID">
             <v-list-item-title>
-              {{file.title}}
+              <v-row>
+                <v-col cols="9" class="flex-grow-1" v-on:click="onSelectFile(file)">
+                  {{file.title}}
+                </v-col>
+              <v-col cols="2" v-on:click="onDeleteFile(file, index)">
+                <v-btn :loading="file.deleting" icon>
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+              </v-col>
+              </v-row>
             </v-list-item-title>
           </v-list-item>
           <v-list-item key="addnew" v-on:click="onSelectFile('addnew')">
@@ -28,24 +37,33 @@
           </v-list-item>
         </v-list>
       </v-dialog>
-        <v-row no-gutters style="height: 100%;">
-          <v-col cols="6" id="editor-col" class="flex-grow-1" style="height: 100%;">
-            <MonacoEditor
-              id="editor-real"
-              ref="editor"
-              class="mr-2 mt-2"
-              height="100%"
-              theme="vs"
-              language="markdown"
-              :options="options"
-              :value="file.content"
-              @change="onChange"
-            ></MonacoEditor>
-          </v-col>
-          <v-col cols="6" id="preview-col" class="flex-grow-1">
-            <div v-html="preview" class="ml-2 mr-2 mt-2 markdown-body"></div>
-          </v-col>
-        </v-row>
+      <v-btn icon dense v-if="!loadingDetail"
+        style="position: fixed; z-index: 100; left: 50%; margin-left: -50px; top: -5px;">
+        <v-icon :color="syncStatus" small>mdi-sync</v-icon>
+      </v-btn>
+      <v-row no-gutters style="height: 100%;">
+        <v-col cols="6" id="editor-col" class="flex-grow-1" style="height: 100%;">
+          <v-skeleton-loader v-if="loadingDetail" type="article@4">
+          </v-skeleton-loader>
+          <MonacoEditor
+            v-else
+            height="100%"
+            id="editor-real"
+            ref="editor"
+            class="mr-2 mt-2"
+            theme="vs"
+            language="markdown"
+            :options="options"
+            :value="file.content"
+            @change="onChange"
+          ></MonacoEditor>
+        </v-col>
+        <v-col cols="6" id="preview-col" class="flex-grow-1">
+          <v-skeleton-loader v-if="loadingDetail" type="article@4">
+          </v-skeleton-loader>
+          <div v-html="preview" class="ml-2 mr-2 mt-2 markdown-body" v-else></div>
+        </v-col>
+      </v-row>
       <v-snackbar class="mb-2" v-model="showSnackbar" :timeout="snackbarTimeOut">{{snackbarText}}</v-snackbar>
     </v-main>
   </v-app>
@@ -56,8 +74,15 @@ import _ from 'loadsh'
 import marked from 'marked'
 import {API, http} from './utils/http'
 import DOMPurify from 'dompurify'
+import eol from "eol";
+import getInitMD from "./utils/initmd";
 const sha256 = require('crypto-js/sha256')
 const KEY_STORAGE_FILEID = 'lastEditFileID'
+const EMPTY_FILE = {
+  fileID: '',
+  title: '',
+  content: ''
+}
 
 export default {
   name: "App",
@@ -79,11 +104,8 @@ export default {
         peekWidgetDefaultFocus: true,
       },
       // current file editing
-      file:{
-        fileID: '',
-        title: 'new md file',
-        content: '# input here'
-      },
+      file: Object.assign({}, EMPTY_FILE),
+      loadingDetail: true,
       // file list
       dialogSelect: false,
       fileList: null,
@@ -91,6 +113,8 @@ export default {
       dialog: false,
       btn_loading: false,
       password: '',
+      // sync status
+      syncStatus: 'green',
       // global snackbar
       showSnackbar: false,
       snackbarText: '',
@@ -103,9 +127,26 @@ export default {
     },
   },
   watch: {
-    file: function(newValue) {
-      document.title = newValue.title
-      window.localStorage.setItem(KEY_STORAGE_FILEID, newValue.fileID)
+    'file.fileID': function(newValue) {
+      window.localStorage.setItem(KEY_STORAGE_FILEID, newValue)
+    },
+    'file.title': function(newValue) {
+      document.title = newValue
+    },
+    preview: function(newValue) {
+      const arr = eol.split(newValue)
+      let title = ''
+      for(let i=0; i<arr.length; i++) {
+        const tmp = DOMPurify.sanitize(arr[i], {
+          ALLOWED_TAGS: []
+        })
+        console.log(tmp)
+        if (tmp) {
+          title = tmp
+          break
+        }
+      }
+      this.file.title = title
     }
   },
   methods: {
@@ -115,12 +156,29 @@ export default {
     }, 200),
     onChangeUpload: _.debounce(function() {
       this.uploadImpl()
-    }, 1200),
+    }, 10),
     ctrlSUpload: _.debounce(function(){
       this.uploadImpl()
     }, 100),
-    uploadImpl: function() {
+    async uploadImpl() {
       if (!this.file.fileID && !this.file.content) {
+        return
+      }
+      this.syncStatus = 'yellow'
+      if (!this.file.content) {
+        // 清空内容，则删除当前文件
+        http.get(API.file.destory, {
+          params: {
+            fileID: this.file.fileID
+          }
+        })
+        .then(() => {
+          this.syncStatus = 'green'
+        })
+        .catch(err => {
+          this.syncStatus = 'red'
+          window.showSnackbar('更新失败: ' + err + '\n按ctrl+s重试')
+        })
         return
       }
       http
@@ -131,10 +189,12 @@ export default {
         if (res.code !== 0) {
           return Promise.reject(res.msg)
         }
+        this.syncStatus = 'green'
         this.file.fileID = res.data.fileID
       })
       .catch(err => {
         console.error(err)
+        this.syncStatus = 'red'
         window.showSnackbar('保存失败：' + err + '\n按ctrl+s进行保存')
       })
     },
@@ -167,6 +227,9 @@ export default {
         if (res.code !== 0) {
           return Promise.reject(res.msg)
         }
+        res.data.forEach(element => {
+          element.deleting = false
+        });
         this.fileList = res.data
       })
       .catch(err => {
@@ -175,50 +238,64 @@ export default {
     },
     async onSelectFile(file) {
       if (file === 'addnew') {
-        this.file = {
-          fileID: '',
-          content: '',
-          title: ''
-        }
+        this.file = Object.assign({}, EMPTY_FILE)
       } else {
         await this.getFileDetail(file.fileID)
       }
       this.dialogSelect = false
     },
+    async onDeleteFile(file, index) {
+      console.log('deleting', file, index, 'this.file', this.file)
+      if (file.fileID === this.file.fileID) {
+        console.log('deleting current')
+        this.file = Object.assign({}, EMPTY_FILE)
+      }
+      file.deleting = true
+      http.get(API.file.destory, {
+        params: {
+          fileID: file.fileID
+        }
+      })
+      .then(() => {
+        file.deleting = false
+        this.fileList.splice(index, 1)
+      })
+      .catch(err => {
+        file.deleting = false
+        window.showSnackbar('删除失败：' + err + '\n请重试')
+      })
+    },
     async getFileDetail(fileID = '') {
+      this.loadingDetail = true
       await http
       .get(API.file.detail, {fileID})
-      .then(res => {
+      .then(async(res) => {
         if (res.code !== 0) {
           return Promise.reject(res.msg)
         }
-        if (!res.data) {
+        if (!res.data && fileID) {
           return
         }
-        this.file = (({fileID, title, content}) => ({fileID, title, content}))(res.data)
+        let file = {}
+        if (!res.data) {
+          // 第一次进入，使用默认文件
+          file = Object.assign({}, EMPTY_FILE, {
+            content: await getInitMD()
+          })
+        } else {
+          file = (({fileID, title, content}) => ({fileID, title, content}))(res.data)
+        }
+        this.file = file
       })
       .catch(err => {
         window.showSnackbar('请刷新页面重试。\n打开文件失败：' + err)
       })
+      this.loadingDetail = false
     },
     async openFileList() {
-      if (this.fileList === null) {
-        await this.getFileList()
-      }
+      await this.getFileList()
       this.dialogSelect = true
     }
-  },
-  mounted: function() {
-    const editor = this.$refs.editor.editor
-    const editorWidth = editor._domElement.clientWidth
-    const updateEditorHeight = function(event) {
-      const contentHeight = Math.max(screen.height, event.contentHeight)
-      editor.layout({
-        width: editorWidth,
-        height: contentHeight,
-      })
-    }
-    editor.onDidContentSizeChange(updateEditorHeight)
   },
   created: function (){
     this.dialog = window.localStorage.getItem('auth') ? false : true
@@ -248,8 +325,6 @@ export default {
         fileID = window.localStorage.getItem(KEY_STORAGE_FILEID)
       }
       this.getFileDetail(fileID)
-      // 获取文件列表
-      this.getFileList()
     }
   },
 };

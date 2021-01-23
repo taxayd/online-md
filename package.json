@@ -2,6 +2,7 @@
   "name": "online-md",
   "version": "1.0.0",
   "private": true,
+  "description": "self hosted online markdown editor",
   "scripts": {
     "prestart": "yarn install",
     "dev": "yarn run serve",
@@ -19,6 +20,7 @@
     "crypto-js": "^4.0.0",
     "diff": "^5.0.0",
     "dompurify": "^2.2.6",
+    "eol": "^0.9.1",
     "loadsh": "^0.0.4",
     "marked": "^1.2.7",
     "monaco-editor-vue": "^1.0.10",
@@ -30,7 +32,6 @@
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.5.0",
     "@vue/cli-plugin-eslint": "~4.5.0",
-    "@vue/cli-plugin-pwa": "~4.5.0",
     "@vue/cli-service": "~4.5.0",
     "babel-eslint": "^10.1.0",
     "eslint": "^6.7.2",
